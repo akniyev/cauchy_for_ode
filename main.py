@@ -84,9 +84,4 @@ def laguerre_derivative(k, alpha, x):
 n = int(input("Enter the order: "))
 
 roots = find_all_roots_of_laguerre(n, alpha)
-
-
-
-
-
-
+print(roots)
