@@ -1,26 +1,40 @@
-import time
+import math
+import matplotlib
 
-laguerre_cache = dict()
 epsilon = 1e-12
 alpha = 0
 
 
+def cached(func):
+    """
+    A decorator which caches values for pure functions
+    """
+    cache = {}
+
+    def wrapper(*args):
+        if args in cache:
+            return cache[args]
+        result = func(*args)
+        cache[args] = result
+        return result
+
+    return wrapper
+
+
+@cached
 def laguerre(k, alpha, x):
-    if (k, alpha, x) in laguerre_cache:
-        return laguerre_cache[(k, alpha, x)]
     if k == 0:
         return 1
     elif k == 1:
         return -x + alpha + 1
 
-    a = (2*k - 1 + alpha - x) / k
+    a = (2 * k - 1 + alpha - x) / k
     b = (k + alpha - 1) / k
 
-    result = a * laguerre(k - 1, alpha, x) - b * laguerre(k - 2, alpha, x)
-    laguerre_cache[(k, alpha, x)] = result
-    return result
+    return a * laguerre(k - 1, alpha, x) - b * laguerre(k - 2, alpha, x)
 
 
+@cached
 def find_root_of_laguerre(k, alpha, a, b):
     """
     Finds the root of the Laguerre polynomials of order k on the segment [a,b].
@@ -46,6 +60,7 @@ def find_root_of_laguerre(k, alpha, a, b):
         return find_root_of_laguerre(k, alpha, mid_point, b)
 
 
+@cached
 def find_all_roots_of_laguerre(k, alpha):
     """
     Finds all k roots of the Laguerre polynomials of order k
@@ -77,11 +92,58 @@ def find_all_roots_of_laguerre(k, alpha):
     return roots[k]
 
 
+@cached
 def laguerre_derivative(k, alpha, x):
-    return -laguerre(k-1, alpha+1, x)
+    return -laguerre(k - 1, alpha + 1, x)
 
 
-n = int(input("Enter the order: "))
+@cached
+def root_to_weight(root, n):
+    return 1.0 / root / ((laguerre(n - 1, alpha + 1, root)) ** 2)
+
+
+@cached
+def sobolev_laguerre(tau, b, j):
+    return math.sqrt(b) * tau * laguerre(j - 1, 1, b * tau) / j
+
+
+def etta(x):
+    return 1
+
+
+def f(x, y):
+    return 1
+
+
+@cached
+def g(tau, k, a, b):
+    first_arg = 1 - math.exp(-a * tau)
+    second_arg_sum_c_sobolev_laguerre = etta(0) + sum(
+        [c[j] * sobolev_laguerre(tau, b, j + 1) for j in range(n_part + 1)])
+    return f(first_arg, second_arg_sum_c_sobolev_laguerre) * laguerre(k, 0, tau * b) * math.exp((1 - a - b) * tau)
+
+
+# n = int(input("Enter the order: "))
+n = 10
+n_part = 10
+
+c = [1 / n_part for i in range(n_part)]
+
+a = 1
+b = 1
+k = 2
 
 roots = find_all_roots_of_laguerre(n, alpha)
+weights = [root_to_weight(root, n) for root in roots]
+
+result = sum([(roots[i] ** 2) * weights[i] for i in range(n)])
+print(result)
+
+# result = a * sum([weights[i] * g(roots[i], k, a, b) for i in range(n)])
+
+
 print(roots)
+print(weights)
+
+
+
