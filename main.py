@@ -1,9 +1,19 @@
 import math
-import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 
 epsilon = 1e-12
-alpha = 0
+# alpha = 0
 
+# START: Initial conditions
+y0 = 1
+
+
+def f(x, y):
+    return x * y
+
+
+# END: Initial conditions
 
 def cached(func):
     """
@@ -28,10 +38,10 @@ def laguerre(k, alpha, x):
     elif k == 1:
         return -x + alpha + 1
 
-    a = (2 * k - 1 + alpha - x) / k
-    b = (k + alpha - 1) / k
+    _a = (2 * k - 1 + alpha - x) / k
+    _b = (k + alpha - 1) / k
 
-    return a * laguerre(k - 1, alpha, x) - b * laguerre(k - 2, alpha, x)
+    return _a * laguerre(k - 1, alpha, x) - _b * laguerre(k - 2, alpha, x)
 
 
 @cached
@@ -66,7 +76,7 @@ def find_all_roots_of_laguerre(k, alpha):
     Finds all k roots of the Laguerre polynomials of order k
     :param k: the order of the polynomials
     :param alpha: a parameter of the Laguerre polynomials
-    :return: the array containing all the roots
+    :return: the array containing all the k roots roots[0], ...,roots[k-1]
     """
     max_bound = 4 * k + 2
 
@@ -93,13 +103,14 @@ def find_all_roots_of_laguerre(k, alpha):
 
 
 @cached
-def laguerre_derivative(k, alpha, x):
-    return -laguerre(k - 1, alpha + 1, x)
-
-
-@cached
-def root_to_weight(root, n):
-    return 1.0 / root / ((laguerre(n - 1, alpha + 1, root)) ** 2)
+def root_to_weight(root, k, alpha):
+    """
+    Given one root of the Laguerre polynomials of order k, calculates the corresponding weight
+    :param root:
+    :param k: int
+    :return:
+    """
+    return 1.0 / root / ((laguerre(k - 1, alpha + 1, root)) ** 2)
 
 
 @cached
@@ -107,43 +118,73 @@ def sobolev_laguerre(tau, b, j):
     return math.sqrt(b) * tau * laguerre(j - 1, 1, b * tau) / j
 
 
-def etta(x):
-    return 1
-
-
-def f(x, y):
-    return 1
-
-
 @cached
-def g(tau, k, a, b):
-    first_arg = 1 - math.exp(-a * tau)
-    second_arg_sum_c_sobolev_laguerre = etta(0) + sum(
-        [c[j] * sobolev_laguerre(tau, b, j + 1) for j in range(n_part + 1)])
-    return f(first_arg, second_arg_sum_c_sobolev_laguerre) * laguerre(k, 0, tau * b) * math.exp((1 - a - b) * tau)
+def all_weights(_k, _alpha):
+    _roots = find_all_roots_of_laguerre(_k, _alpha)
+    return [root_to_weight(root, _k, _alpha) for root in _roots]
 
 
-# n = int(input("Enter the order: "))
-n = 10
-n_part = 10
+def g(tau, _k, _a, _b, _c, _alpha, n_part):
+    first_arg = 1 - math.exp(-_a * tau)
+    second_arg_sum_c_sobolev_laguerre = y0 + sum([_c[j] * sobolev_laguerre(tau, _b, j + 1) for j in range(n_part + 1)])
+    return f(first_arg, second_arg_sum_c_sobolev_laguerre) * laguerre(_k, 0, tau * _b) * math.exp((1 - _a - _b) * tau)
 
-c = [1 / n_part for i in range(n_part)]
 
+def perform_iteration_on_c(c0, _a, _b, _k, _alpha, n_part, _n):
+    """
+    :param c0: a _k+1 array
+    :param _a:
+    :param _b:
+    :param _k:
+    :param _alpha:
+    :param n_part:
+    :return:
+    """
+    weights = all_weights(_n, _alpha)
+    _roots = find_all_roots_of_laguerre(_n, _alpha)
+    gs = [g(root, _k, _a, _b, c0, _alpha, n_part) for root in _roots]
+
+    return _a * sum([weights[i] * gs[i] for i in range(_n)])
+
+
+def perform_iteration_on_cs(c0, _a, _b, _alpha, n_part, _n):
+    return [perform_iteration_on_c(c0, _a, _b, k, _alpha, n_part, _n) for k in range(n_part+1)]
+
+
+def distance(c0, c1):
+    _n = len(c0)
+    return math.sqrt(sum([(c0[i] - c1[i]) ** 2 for i in range(_n)]))
+
+
+def find_cs(_k, _a, _b, _alpha, threshold, n_part, _n):
+    c0 = [1/(i+1) for i in range(n_part+1)]
+    c1 = perform_iteration_on_cs(c0, _a, _b, _alpha, n_part, _n)
+
+    while distance(c0, c1) > threshold:
+        c0 = c1
+        c1 = perform_iteration_on_cs(c0, _a, _b, _alpha, n_part, _n)
+
+    return c1
+
+
+def find_solution(t, _k, _a, _b, _alpha, threshold, n_part, _n):
+    c = find_cs(_k, _a, _b, _alpha, threshold, n_part, _n)
+    return y0 + sum([c[k] * sobolev_laguerre(t, _b, k+1) for k in range(n_part+1)])
+
+
+n_dense = 2000
+c_threshold = 1e-3
+n = 20
+alpha = 0
+n_part = 15
 a = 1
 b = 1
-k = 2
 
-roots = find_all_roots_of_laguerre(n, alpha)
-weights = [root_to_weight(root, n) for root in roots]
-
-result = sum([(roots[i] ** 2) * weights[i] for i in range(n)])
-print(result)
-
-# result = a * sum([weights[i] * g(roots[i], k, a, b) for i in range(n)])
+ts = [i/n_dense for i in range(n_dense)]
+ys = [find_solution(-math.log(1-t)/a, n, a, b, alpha, c_threshold, n_part, n) for t in ts]
+solution_ys = [math.exp((t ** 2)/2) for t in ts]
 
 
-print(roots)
-print(weights)
-
-
-
+plt.plot(ts, ys)
+plt.plot(ts, solution_ys)
+plt.show()
