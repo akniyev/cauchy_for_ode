@@ -127,7 +127,7 @@ def all_weights(_k, _alpha):
 def g(tau, _k, _a, _b, _c, _alpha, n_part):
     first_arg = 1 - math.exp(-_a * tau)
     second_arg_sum_c_sobolev_laguerre = y0 + sum([_c[j] * sobolev_laguerre(tau, _b, j + 1) for j in range(n_part + 1)])
-    return f(first_arg, second_arg_sum_c_sobolev_laguerre) * laguerre(_k, 0, tau * _b) * math.exp((1 - _a - _b) * tau)
+    return f(first_arg, second_arg_sum_c_sobolev_laguerre) * math.sqrt(b) * laguerre(_k, 0, tau * _b) * math.exp((1 - _a - _b) * tau)
 
 
 def perform_iteration_on_c(c0, _a, _b, _k, _alpha, n_part, _n):
@@ -177,10 +177,10 @@ c_threshold = 1e-3
 n = 20
 alpha = 0
 n_part = 15
-a = 1
-b = 1
+a = 1/5
+b = 2
 
-ts = [i/n_dense for i in range(n_dense)]
+ts = [i/n_dense for i in range(n_dense // 2)]
 ys = [find_solution(-math.log(1-t)/a, n, a, b, alpha, c_threshold, n_part, n) for t in ts]
 solution_ys = [math.exp((t ** 2)/2) for t in ts]
 
