@@ -4,14 +4,15 @@ from Cython.Build import cythonize
 
 
 examples_extension = Extension(
-    name="pyexamples",
-    sources=["pyexamples.pyx"],
-    libraries=["examples"],
+    name="laguerre_module",
+    sources=["laguerre_module.pyx"],
+    libraries=["laguerre"],
     library_dirs=["lib"],
     include_dirs=["lib"]
 )
 
 setup(
-    name="pyexamples",
+    name="laguerre_module",
     ext_modules=cythonize([examples_extension]), requires=['Cython']
 )
+

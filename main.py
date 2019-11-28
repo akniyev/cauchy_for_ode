@@ -1,19 +1,19 @@
-import math
-import matplotlib.pyplot as plt
-import numpy as np
+#!/usr/bin/env python
+# coding: utf-8
 
-epsilon = 1e-12
-# alpha = 0
+# # Calculating the Laguerre polynomials
+# We will calculate these polynomials with the following recurrent formula:
+# $$
+# L_{k+1}^{(\alpha)}(x)=\frac{(2k+1+\alpha-x)L_k^{(\alpha)}(x)-(k+\alpha)L_{k-1}^{(\alpha)}(x)}{k+1},
+# $$
+# where $L^{(\alpha)}_0(x)=1$ and $L^{(\alpha)}_1(x)=1+\alpha-x$.
 
-# START: Initial conditions
-y0 = 1
+# Here we use a special decorator for caching:
+
+# In[1]:
 
 
-def f(x, y):
-    return x * y
-
-
-# END: Initial conditions
+import c_code.laguerre_module as cl
 
 def cached(func):
     """
@@ -31,8 +31,17 @@ def cached(func):
     return wrapper
 
 
+# The function that calculates the Laguerre polynomials:
+
+# In[2]:
+
+
+def laguerre_c(k, alpha, x):
+    return cl.py_laguerre_iterative(k, alpha, x)
+
+
 @cached
-def laguerre(k, alpha, x):
+def laguerre_python(k, alpha, x):
     if k == 0:
         return 1
     elif k == 1:
@@ -41,37 +50,54 @@ def laguerre(k, alpha, x):
     _a = (2 * k - 1 + alpha - x) / k
     _b = (k + alpha - 1) / k
 
-    return _a * laguerre(k - 1, alpha, x) - _b * laguerre(k - 2, alpha, x)
+    return _a * laguerre_python(k - 1, alpha, x) - _b * laguerre_python(k - 2, alpha, x)
 
 
-# @cached
-def find_root_of_laguerre(k, alpha, a, b):
+def laguerre(k, alpha, x):
+    return laguerre_c(k, alpha, x)
+
+
+# Here we test our function. If you want to plot $L_n^{(\alpha)}$ change the values $n$ and $alpha$ in the code below. The values $a$ and $b$ allow to change the segment on which we draw the polynomial and $density$ controls the drawing precision.
+
+# In[7]:
+
+
+import matplotlib.pyplot as plt
+
+
+# Now we want to calculate the roots of this polynomial. We will use the function ```find_all_roots_of_laguerre``` to do this. The parameter ```epsilon``` is used to stop iteration when the precision of the solution is less than it.
+
+# In[8]:
+
+
+@cached
+def find_root_of_laguerre(k, alpha, a, b, epsilon):
     """
     Finds the root of the Laguerre polynomials of order k on the segment [a,b].
     The root must be single.
     """
     mid_point = (a + b) / 2
     fa = laguerre(k, alpha, a)
-    # fb = laguerre(k, alpha, b)
+    fb = laguerre(k, alpha, b)
     fc = laguerre(k, alpha, mid_point)
 
-    if abs(b-a) < epsilon:
+    if abs(a - b) < epsilon:
         return (a + b) / 2
 
-    # if fa * fb > 0:
-    #     raise Exception("The function should have different signs at the ends")
+    if fa * fb > 0:
+        raise Exception("The function should have different signs at the ends")
 
     if abs(fc) < epsilon:
         return mid_point
 
     elif fa * fc < 0:
-        return find_root_of_laguerre(k, alpha, a, mid_point)
+        return find_root_of_laguerre(k, alpha, a, mid_point, epsilon)
     else:
-        return find_root_of_laguerre(k, alpha, mid_point, b)
+        return find_root_of_laguerre(k, alpha, mid_point, b, epsilon)
 
 
-# @cached
-def find_all_roots_of_laguerre(k, alpha):
+@cached
+def find_all_roots_of_laguerre(k, alpha, epsilon = 1e-12):
     """
     Finds all k roots of the Laguerre polynomials of order k
     :param k: the order of the polynomials
@@ -88,10 +114,8 @@ def find_all_roots_of_laguerre(k, alpha):
         for s in segments[j]:
             left_end = s[0]
             right_end = s[1]
-            segment_root = find_root_of_laguerre(j, alpha, left_end, right_end)
+            segment_root = find_root_of_laguerre(j, alpha, left_end, right_end, epsilon)
             layer_roots.append(segment_root)
-
-        print(f"{j} {len(layer_roots)}")
 
         next_segments = [(0, layer_roots[0])]
         for i in range(len(layer_roots) - 1):
@@ -104,6 +128,15 @@ def find_all_roots_of_laguerre(k, alpha):
     return roots[k]
 
 
+# In[9]:
+
+
+# In[10]:
+
+
+# In[11]:
+
+
 @cached
 def root_to_weight(root, k, alpha):
     """
@@ -112,7 +145,7 @@ def root_to_weight(root, k, alpha):
     :param k: int
     :return:
     """
-    return 1.0 / root / ((laguerre(k - 1, alpha + 1, root)) ** 2)
+    return 1.0 / root / ((laguerre(k - 1, 1, root)) ** 2)
 
 
 @cached
@@ -121,15 +154,55 @@ def all_weights(_k, _alpha):
     return [root_to_weight(root, _k, _alpha) for root in _roots]
 
 
+# We check the above function for ```n=32```. We should get approximately the following weights:
+# ```
+# 0,109218341953551; 0,210443107938996; 0,235213229669841; 0,195903335972852; 0,129983786286025; 0,0705786238656435; 0,0317609125091945; 0,0119182148348296; 0,00373881629460919; 0,000980803306615199; 0,000214864918801345; 3,92034196798651E-05; 5,93454161287654E-06; 7,41640457866401E-07; 7,60456787911671E-08; 6,3506022266307E-09; 4,28138297104417E-10; 2,30589949189201E-11; 9,79937928872355E-13; 3,23780165772521E-14; 8,17182344341286E-16; 1,54213383339424E-17; 2,11979229016417E-19; 2,05442967378971E-21; 1,34698258663885E-23; 5,66129413040054E-26; 1,41856054546278E-28; 1,91337549445178E-31; 1,1922487600965E-34; 2,67151121923763E-38; 1,33861694210782E-42; 4,5105361938963E-48;
+# ```
+
+# In[12]:
+
+
+
+
+
+# Now we calculate the function
+# $$
+# {l}_{1,j+1}(\tau;b)=\frac{\sqrt{b}\tau L_{j}^1(b\tau)}{j+1}, \quad j=0,1,\ldots.
+# $$
+
+# In[13]:
+
+
 @cached
 def sobolev_laguerre(tau, b, j):
     return math.sqrt(b) * tau * laguerre(j - 1, 1, b * tau) / j
 
 
+# The next step is to calculate
+# $$
+# g(\tau)=f\left(1-e^{-a\tau},\eta(0)+ \sum\limits_{j=0}^{N} c_jl_{1,j+1}(\tau;b)\right)L_{k}(\tau;b)e^{(1-a-b)\tau}.
+# $$
+
+# In[14]:
+
+
 def g(tau, _k, _a, _b, _c, _alpha, n_part):
     first_arg = 1 - math.exp(-_a * tau)
-    second_arg_sum_c_sobolev_laguerre = y0 + sum([_c[j] * sobolev_laguerre(tau, _b, j + 1) for j in range(n_part + 1)])
-    return f(first_arg, second_arg_sum_c_sobolev_laguerre) * math.sqrt(b) * laguerre(_k, 0, tau * _b) * math.exp((1 - _a - _b) * tau)
+    s0 = sum([_c[j] * sobolev_laguerre(tau, _b, j + 1) for j in range(n_part + 1)])
+    second_arg_sum_c_sobolev_laguerre = y0 + s0
+    s1 = math.sqrt(b) * laguerre(_k, 0, tau * _b) * math.exp((1 - _a - _b) * tau)
+    return f(first_arg, second_arg_sum_c_sobolev_laguerre) * s1
+
+
+# The following function calculates one iteration for finding coefficients $c_i$ which we will use later for finding the solution.
+# $$
+# c_k =
+# a\int_{0}^\infty e^{-a\tau}f\left(1-e^{-a\tau},\eta(0)+ \sum\limits_{j=0}^{N} c_jl_{1,j+1}(\tau;b)\right)L_{k}(\tau;b)e^{-b\tau}d\tau\approx
+# a\sum_{i=1}^M A_i^M g(\tau_i^M),
+# $$
+# for $k=0,1,\ldots,N$, where N is the order of the partial sum (we use the variable ```n_part``` for it below). We also use ```n``` for $M$.
+
+# In[15]:
 
 
 def perform_iteration_on_c(c0, _a, _b, _k, _alpha, n_part, _n):
@@ -153,9 +226,19 @@ def perform_iteration_on_cs(c0, _a, _b, _alpha, n_part, _n):
     return [perform_iteration_on_c(c0, _a, _b, k, _alpha, n_part, _n) for k in range(n_part+1)]
 
 
+# This function calculates the distance between two vectors.
+
+# In[16]:
+
+
 def distance(c0, c1):
     _n = len(c0)
     return math.sqrt(sum([(c0[i] - c1[i]) ** 2 for i in range(_n)]))
+
+
+# This function performs iterations until the distance is small enough.
+
+# In[17]:
 
 
 def find_cs(_k, _a, _b, _alpha, threshold, n_part, _n):
@@ -169,44 +252,85 @@ def find_cs(_k, _a, _b, _alpha, threshold, n_part, _n):
     return c1
 
 
+# Now we can find the solution:
+# $$
+# \eta(t) = \eta(0)+ \sum_{k=0}^\infty c_{1,k+1}(\eta) l_{1,k+1}(t;b) \approx
+# \eta(0)+ \sum_{k=0}^N c_{1,k+1}(\eta) l_{1,k+1}(t;b).
+# $$
+
+# In[18]:
+
+
 def find_solution(t, _k, _a, _b, _alpha, threshold, n_part, _n):
     c = find_cs(_k, _a, _b, _alpha, threshold, n_part, _n)
     return y0 + sum([c[k] * sobolev_laguerre(t, _b, k+1) for k in range(n_part+1)])
 
 
-# import time
+# In[19]:
+
+import math
+import time
+
+
+def f(x, y):
+    return x * math.exp(-x**2) - 2*x*y
+
+
+density = 1000
+c_threshold = 1e-3
+n = 20
+y0 = 1
+alpha = 0
+n_part = 15
+a = 1
+b = 1
+
+ts = [i/density for i in range(density)]
+
+start_time = time.time()
+ys = [find_solution(-math.log(1-t)/a, n, a, b, alpha, c_threshold, n_part, n) for t in ts]
+end_time = time.time()
+
+print("Running time: ", end_time - start_time)
+
+solution_ys = [((t**2)/2+1)*math.exp(-t**2) for t in ts]
+
+plt.plot(ts, ys, linewidth=1, label=f'The solution')
+plt.plot(ts, solution_ys, linewidth=1, label=f'The exact solution')
+
+plt.grid()
+plt.show()
+
+
+# In[20]:
+
 #
-# _n = 100
-# _alpha = 0
+# def f(x, y):
+#     return math.exp(x) + y
 #
-# start_time = time.time()
-# roots = find_all_roots_of_laguerre(_n, _alpha)
-# end_time = time.time()
-# print(roots)
-# print(end_time - start_time)
-
-import pyexamples
-
-pyexamples.py_hello(b"word")
-x = pyexamples.py_d_abs(-31)
-
-print(x)
-print(type(x))
-print(type(1.2))
-
-# n_dense = 2000
+#
+# density = 2000
 # c_threshold = 1e-3
 # n = 20
+# y0 = 2
 # alpha = 0
 # n_part = 15
-# a = 1/5
-# b = 2
+# a = 2
+# b = 1
 #
-# ts = [i/n_dense for i in range(n_dense // 2)]
+# ts = [i/density for i in range(density)]
 # ys = [find_solution(-math.log(1-t)/a, n, a, b, alpha, c_threshold, n_part, n) for t in ts]
-# solution_ys = [math.exp((t ** 2)/2) for t in ts]
+# solution_ys = [(t + 2) * math.exp(t) for t in ts]
 #
+# plt.plot(ts, ys, linewidth=1, label=f'The solution')
+# plt.plot(ts, solution_ys, linewidth=1, label=f'The exact solution')
 #
-# plt.plot(ts, ys)
-# plt.plot(ts, solution_ys)
+# plt.grid()
 # plt.show()
+
+
+# In[ ]:
+
+
+
+
