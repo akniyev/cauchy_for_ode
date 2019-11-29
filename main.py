@@ -1,5 +1,8 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
+from PyQt5.QtQml import QQmlApplicationEngine
+from PyQt5.QtCore import QUrl, QObject
+import sys
 
 from laguerre_functions import *
 from main_window import Ui_MainWindow
@@ -23,11 +26,34 @@ class CauchySolverWindow(Ui_MainWindow):
         print(n)
 
 
+def run():
+    app = QApplication(sys.argv)
+    engine = QQmlApplicationEngine()
+    engine.load('qt_gui/main_window.qml')
+    if not engine.rootObjects():
+        return -1
+
+    win = engine.rootObjects()[0]
+
+    okButton = win.findChild(QObject, "okButton")
+    okButton.clicked.connect(action)
+
+    return app.exec_()
+
+
+def action():
+    print("Action!")
+
+
 if __name__ == "__main__":
-    # Setup GUI
-    app = QApplication([])
+    # Setup GUI old school
+    # app = QApplication([])
+    #
+    # solver_ui = CauchySolverWindow()
+    # solver_ui.window.show()
+    #
+    # app.exec_()
 
-    solver_ui = CauchySolverWindow()
-    solver_ui.window.show()
+    # Setup GUI with QML
+    sys.exit(run())
 
-    app.exec_()
