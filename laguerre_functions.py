@@ -93,15 +93,6 @@ def g(tau, _k, _a, _b, _c, _alpha, n_part, f, y0):
 
 
 def perform_iteration_on_c(c0, _a, _b, _k, _alpha, n_part, _n):
-    """
-    :param c0: a _k+1 array
-    :param _a:
-    :param _b:
-    :param _k:
-    :param _alpha:
-    :param n_part:
-    :return:
-    """
     weights = all_weights(_n, _alpha)
     _roots = find_all_roots_of_laguerre(_n, _alpha)
     gs = [g(root, _k, _a, _b, c0, _alpha, n_part) for root in _roots]
