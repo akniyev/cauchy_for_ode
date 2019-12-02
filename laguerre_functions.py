@@ -118,3 +118,7 @@ def find_cs(_k, _a, _b, _alpha, threshold, n_part, _n):
         c1 = perform_iteration_on_cs(c0, _a, _b, _alpha, n_part, _n)
 
     return c1
+
+
+def find_solution(t, _k, _a, _b, _alpha, c, n_part, _n, y0):
+    return y0 + sum([c[k] * sobolev_laguerre(t, _b, k+1) for k in range(n_part+1)])
