@@ -75,14 +75,19 @@ class CauchySolverWindow(Ui_MainWindow):
         self.btnNextIteration.setEnabled(True)
 
     def next_iteration(self):
+        density = 2000
+
         self.solver.next_iterations()
-        xs_solution, ys_solution = self.solver.get_solution(2000)
+        xs_solution, ys_solution = self.solver.get_solution(density)
+
+        xs_exact_solution, ys_exact_solution = self.solver.exact_solution(density)
 
         plt.clf()
         plt.plot(xs_solution, ys_solution, label="Solution", linewidth=1)
+        plt.plot(xs_solution, ys_exact_solution, label="Exact solution", linewidth=1)
         plt.show()
-        plt.close()
 
+        plt.legend()
 
 
 def run():

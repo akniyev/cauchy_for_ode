@@ -1,4 +1,5 @@
 from laguerre_functions import *
+import time
 
 
 k = 100

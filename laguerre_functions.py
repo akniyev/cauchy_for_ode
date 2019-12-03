@@ -92,16 +92,16 @@ def g(tau, _k, _a, _b, _c, _alpha, n_part, f, y0):
     return f(first_arg, second_arg_sum_c_sobolev_laguerre) * s1
 
 
-def perform_iteration_on_c(c0, _a, _b, _k, _alpha, n_part, _n):
+def perform_iteration_on_c(c0, _a, _b, _k, _alpha, n_part, _n, f, y0):
     weights = all_weights(_n, _alpha)
     _roots = find_all_roots_of_laguerre(_n, _alpha)
-    gs = [g(root, _k, _a, _b, c0, _alpha, n_part) for root in _roots]
+    gs = [g(root, _k, _a, _b, c0, _alpha, n_part, f, y0) for root in _roots]
 
     return _a * sum([weights[i] * gs[i] for i in range(_n)])
 
 
-def perform_iteration_on_cs(c0, _a, _b, _alpha, n_part, _n):
-    return [perform_iteration_on_c(c0, _a, _b, k, _alpha, n_part, _n) for k in range(n_part+1)]
+def perform_iteration_on_cs(c0, _a, _b, _alpha, n_part, _n, f, y0):
+    return [perform_iteration_on_c(c0, _a, _b, k, _alpha, n_part, _n, f, y0) for k in range(n_part+1)]
 
 
 def distance(c0, c1):

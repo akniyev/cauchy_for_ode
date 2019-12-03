@@ -14,8 +14,8 @@ class CauchySolver:
         self.epsilon = epsilon
         self.iteration_number = 0
         self.current_cs = []
-
-        self.y0 = 1
+        self.f = lambda x, y: math.exp(x) + y
+        self.y0 = 2
 
     def set_parameters(self, n=None, alpha=None, n_part=None, a=None, b=None, epsilon=None):
         self.n = n if n is not None else self.n
@@ -38,7 +38,7 @@ class CauchySolver:
         self.iteration_number = 0
 
     def next_iterations(self):
-        new_cs = perform_iteration_on_cs(self.current_cs, self.a, self.b, self.alpha, self.n_part, self.n)
+        new_cs = perform_iteration_on_cs(self.current_cs, self.a, self.b, self.alpha, self.n_part, self.n, self.f, self.y0)
         self.iteration_number += 1
         self.current_cs = new_cs
 
@@ -48,7 +48,13 @@ class CauchySolver:
         n = self.n
         n_part = self.n_part
 
-        xs = [1/density for i in range(density)]
-        ys = [find_solution(-math.log(1-x)/a, n, a, b, self.alpha, self.current_cs, n_part, self.y0) for x in xs]
+        xs = [i/density for i in range(density)]
+        ys = [find_solution(-math.log(1-x)/a, n, a, b, self.alpha, self.current_cs, n_part, n, self.y0) for x in xs]
+
+        return xs, ys
+
+    def exact_solution(self, density):
+        xs = [i/density for i in range(density)]
+        ys = [(x+2) * math.exp(x) for x in xs]
 
         return xs, ys
